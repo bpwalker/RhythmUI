@@ -15,6 +15,7 @@ local.properties
 .classpath
 .settings/
 .loadpath
+chrome/
 
 # External tool builders
 .externalToolBuilders/

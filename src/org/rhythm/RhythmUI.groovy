@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
+import groovy.json.JsonSlurper;
 
 import javax.swing.text.Element;
 import javax.swing.text.StyleConstants;
@@ -12,12 +13,13 @@ import javax.swing.text.html.HTML;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
 import org.vertx.groovy.core.Vertx
+import org.vertx.groovy.core.buffer.Buffer
 import org.vertx.groovy.core.http.HttpServer
 
 
 class RhythmUI {
-	private static final int SERVER_PORT = 8686;
-	private static final String SERVER_LISTEN= "localhost";
+	private static int SERVER_PORT = 8686;
+	private static final String SERVER_ACCEPT_LISTEN= "localhost";
 	private static final String CHROME_LOCATION =  "\"" + getLocalPath() + File.separator + "chrome" + File.separator + "GoogleChromePortable.exe\" ";
 	private static final String CHROME_FLAG = "--app=";
 	
@@ -28,6 +30,7 @@ class RhythmUI {
 	private Reader stringReader = null;
 	private HTMLDocument page = null;
 	
+	private methods = [:];
 	
 	
 	public RhythmUI(String filePath) {
@@ -47,6 +50,7 @@ class RhythmUI {
 	public HttpServer getServerInstance(){
 		if(server == null){
 			server = vertx.createHttpServer();
+			
 			server.requestHandler({ request ->
 				def file = "";
 				if(!request.path.contains("..")){
@@ -56,15 +60,19 @@ class RhythmUI {
 				vertx.fileSystem.readFile(constructFilePath(file)) { ar ->
 					if (ar.succeeded) {
 						try {
-							stringReader = new StringReader(ar.result.toString());
-				        	page = (HTMLDocument) htmlKit.createDefaultDocument();
-							htmlKit.read(stringReader, page, 0);
-							Element endOfPage = page.getElement(page.getDefaultRootElement(), StyleConstants.NameAttribute, HTML.Tag.HTML);
-					        page.insertBeforeEnd(endOfPage, "<div>inject</div>");
-					        StringWriter stringWriter = new StringWriter();
-					        htmlKit.write(stringWriter, page, 0, page.getLength());
+							//stringReader = new StringReader(ar.result.toString());
+				        	//page = (HTMLDocument) htmlKit.createDefaultDocument();
+							//htmlKit.read(stringReader, page, 0);
+							//Element endOfPage = page.getElement(page.getDefaultRootElement(), StyleConstants.NameAttribute, HTML.Tag.HTML);
+					        //page.insertBeforeEnd(endOfPage, "<div>inject</div>");
+					        //StringWriter stringWriter = new StringWriter();
+					        //htmlKit.write(stringWriter, page, 0, page.getLength());
 
-							request.response.end(stringWriter.toString());
+							//request.response.end(stringWriter.toString());
+							
+							request.response.end(ar.result.toString());
+							
+							
 							//TODO: Inject javascript library
 						} catch (Exception e) {
 							//TODO: Fail
@@ -75,7 +83,26 @@ class RhythmUI {
 						//TODO: Error message
 					}
 				};
-			}).listen(SERVER_PORT, SERVER_LISTEN);
+			});
+		
+			server.websocketHandler({ ws ->
+				if (ws.path == "/server") {
+					ws.dataHandler{ buffer ->
+						 def methodJson = new JsonSlurper().parseText(buffer.toString());
+						 def response = "{}";
+						 def method = methods[methodJson.method.toString()];
+						 if(method){
+							 response = method(methodJson.parameters as String[]);
+						 }
+						 
+						 ws << new Buffer(response);
+					}
+				} else {
+					ws.reject()
+				}        
+			});
+		
+			server.listen(SERVER_PORT, SERVER_ACCEPT_LISTEN);
 		}
 		return server;
 	}
@@ -93,6 +120,13 @@ class RhythmUI {
 		}
 		
 		return process;
+	}
+	public void on(String name, Closure function){
+		methods.put(name, function);		
+	}
+	
+	public def on(Object object, String method){
+		methods.putAt(method, object.&"$method");
 	}
 
 	public void changeFilePath(String filePath) {
@@ -112,8 +146,16 @@ class RhythmUI {
 	}
 	
 	public static void main(String[] args) throws InterruptedException{
-		Process p = new RhythmUI("ui").startUI("test.html");
+		def ui = new RhythmUI("ui");
+		ui.on(ui, "javaTest");
+		Process p = ui.startUI("test.html");
 		Thread.sleep(100000);
 		//p.destroy();
 	}
+	
+	public String javaTest(String test, String test2){
+		println("Java Parameter 1: " + test + ", Java Parameter 2: " + test2);
+		return "finished java";
+	}
+	
 }

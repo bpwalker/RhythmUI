@@ -2,4 +2,34 @@
 <body>
 Success!
 </body>
+<script type = "text/javascript">
+	var socket = new WebSocket("ws://localhost:8686/server");
+	var rhythm = new RhythmUI();
+	window.rhythm = rhythm;
+	
+	socket.onmessage = function(event) {
+	   alert("Received data from websocket: " + event.data);
+	}
+
+	socket.onopen = function(event) {
+	    window.rhythm.call("javaTest", ["javatest1", "javatest2"], function(){
+	    	console.log("Called function!");
+	    });
+	};
+	
+	socket.onclose = function(event) {
+	   alert("Web Socket closed");
+	};
+	
+	function RhythmUI(){
+		this.call = function(method, parameters, cb){
+			socket.send(JSON.stringify({
+				"method" : method,
+				"parameters" : parameters
+			}))
+			cb();
+		}	
+	};
+	
+</script>
 </html>
