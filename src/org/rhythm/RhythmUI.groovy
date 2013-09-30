@@ -1,17 +1,11 @@
 package org.rhythm
 
-import java.io.File;
-import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
-import java.io.StringWriter;
-import groovy.json.JsonSlurper;
+import groovy.json.JsonBuilder
+import groovy.json.JsonSlurper
 
-import javax.swing.text.Element;
-import javax.swing.text.StyleConstants;
-import javax.swing.text.html.HTML;
-import javax.swing.text.html.HTMLDocument;
-import javax.swing.text.html.HTMLEditorKit;
+import javax.swing.text.html.HTMLDocument
+import javax.swing.text.html.HTMLEditorKit
+
 import org.vertx.groovy.core.Vertx
 import org.vertx.groovy.core.buffer.Buffer
 import org.vertx.groovy.core.http.HttpServer
@@ -86,16 +80,17 @@ class RhythmUI {
 			});
 		
 			server.websocketHandler({ ws ->
-				if (ws.path == "/server") {
+				if (ws.path == "/rhythm") {
 					ws.dataHandler{ buffer ->
 						 def methodJson = new JsonSlurper().parseText(buffer.toString());
-						 def response = "{}";
+						 def response = [:];
 						 def method = methods[methodJson.method.toString()];
+						 def methodId = methodJson.methodId.toString();
 						 if(method){
-							 response = method(methodJson.parameters as String[]);
+							 response = ["results" : method(methodJson.parameters as String[])];
 						 }
-						 
-						 ws << new Buffer(response);
+						 response["methodId"] = methodId; 
+						 ws.writeTextFrame(new JsonBuilder(response).toString());
 					}
 				} else {
 					ws.reject()
@@ -153,9 +148,9 @@ class RhythmUI {
 		//p.destroy();
 	}
 	
-	public String javaTest(String test, String test2){
+	public Map javaTest(String test, String test2){
 		println("Java Parameter 1: " + test + ", Java Parameter 2: " + test2);
-		return "finished java";
+		return ["results" : "finished java"];
 	}
 	
 }

@@ -1,35 +1,47 @@
 <html>
 <body>
 Success!
-</body>
 <script type = "text/javascript">
-	var socket = new WebSocket("ws://localhost:8686/server");
+	var callBacks = {}; 
+	var socket = new WebSocket("ws://localhost:8686/rhythm");
+	
+	if(!socket){
+		window.close();
+	}
+	
 	var rhythm = new RhythmUI();
 	window.rhythm = rhythm;
 	
 	socket.onmessage = function(event) {
-	   alert("Received data from websocket: " + event.data);
+		var data = JSON.parse(event.data);
+	   	var cb = callBacks[data.methodId];
+	   	if(cb){
+	   		delete callBacks[data.methodId];
+	   		cb(data.results);
+	   	}
 	}
 
 	socket.onopen = function(event) {
-	    window.rhythm.call("javaTest", ["javatest1", "javatest2"], function(){
-	    	console.log("Called function!");
+	    window.rhythm.call("javaTest", ["javatest1", "javatest2"], function(data){
+	    	console.log("Called function! Result: " + data.results);
 	    });
 	};
 	
 	socket.onclose = function(event) {
-	   alert("Web Socket closed");
+	   window.close();
 	};
 	
 	function RhythmUI(){
 		this.call = function(method, parameters, cb){
+			var methodId =  method + "_" + (new Date()).getTime();
+			callBacks[methodId] = cb;
 			socket.send(JSON.stringify({
 				"method" : method,
-				"parameters" : parameters
-			}))
-			cb();
+				"parameters" : parameters,
+				"methodId" : methodId
+			}));
 		}	
 	};
-	
 </script>
+</body>
 </html>
