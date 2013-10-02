@@ -20,6 +20,15 @@ class RhythmUI {
 	private static final String SERVER_ACCEPT_LISTEN= "localhost";
 	private static final String CHROME_LOCATION =  "\"" + getLocalPath() + File.separator + "chrome" + File.separator + "GoogleChromePortable.exe\" ";
 	private static final String CHROME_FLAG = "--app=";
+	private static final String BODY_TAG = "body";
+	private static final String SCRIPT_TAG = 'script';
+	private static final String SCRIPT_TYPE_PROPERTY = "text/javascript";
+	private static final String RHYTHMJS_LOCATION ="js/RhythmJS.js"
+	private static final String RHYTHM_WEBSOCKET_PATH = "/rhythm";
+	private static final String COMMAND_PROMPT = "cmd";
+	private static final String COMMAND_PROMPT_FLAG = "/C";
+	private static final String LOCAL_HOST = "http://localhost:";
+	private static final String USER_DIRECTORY = "user.dir"
 	
 	private String filePath = "";
 	private static Vertx vertx = Vertx.newVertx();
@@ -72,13 +81,13 @@ class RhythmUI {
 							
 							def body = root."**".findAll { 
 								try{ 
-									return it.name().equalsIgnoreCase("body");
+									return it.name().equalsIgnoreCase(BODY_TAG);
 								} catch(Exception e) { 
 									return false;
 								} 
 							}[0];
 						
-							body.children().add(0, new Node(null, 'script', [type : "text/javascript"], new File("js/RhythmJS.js").text));
+							body.children().add(0, new Node(null, SCRIPT_TAG, [type : SCRIPT_TYPE_PROPERTY], new File(RHYTHMJS_LOCATION).text));
 						
 							def writer = new StringWriter();
 							new XmlNodePrinter(new PrintWriter(writer)).print(root);
@@ -97,7 +106,7 @@ class RhythmUI {
 			});
 		
 			server.websocketHandler({ ws ->
-				if (ws.path == "/rhythm") {
+				if (ws.path == RHYTHM_WEBSOCKET_PATH) {
 					ws.dataHandler{ buffer ->
 						 def methodJson = new JsonSlurper().parseText(buffer.toString());
 						 def response = [:];
@@ -106,7 +115,7 @@ class RhythmUI {
 						 if(method){
 							 response = ["results" : method(methodJson.parameters as String[])];
 						 }
-						 response["methodId"] = methodId; 
+						 response.methodId = methodId; 
 						 ws.writeTextFrame(new JsonBuilder(response).toString());
 					}
 				} else {
@@ -130,12 +139,12 @@ class RhythmUI {
 		Process process = null;
 		
 		try {
-			process = new ProcessBuilder("cmd", "/C", CHROME_LOCATION, CHROME_FLAG + constructWebPath(file)).start();
+			process = new ProcessBuilder(COMMAND_PROMPT, COMMAND_PROMPT_FLAG, CHROME_LOCATION, CHROME_FLAG + constructWebPath(file)).start();
 		} catch (IOException e) {
 			System.out.println("Process Exception");
 			// TODO Tell user chrome isn't working
 		}
-		
+			
 		return process;
 	}
 	
@@ -190,7 +199,7 @@ class RhythmUI {
 	 * @return The URL string to the file
 	 */
 	public String constructWebPath(String file){
-		return "http://localhost:" + SERVER_PORT + "/" + filePath + "/" + file + "\"";
+		return LOCAL_HOST + SERVER_PORT + "/" + filePath + "/" + file + "\"";
 	}
 	
 	/**
@@ -198,7 +207,7 @@ class RhythmUI {
 	 * @return The user's current directory
 	 */
 	public static String getLocalPath(){
-		return System.getProperty("user.dir");
+		return System.getProperty(USER_DIRECTORY);
 	}
 	
 	public static void main(String[] args) throws InterruptedException{
