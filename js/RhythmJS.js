@@ -20,11 +20,11 @@ socket.onmessage = function(event) {
 }
 
 socket.onopen = function(event) {
-	socketInitialized = true;
 	//Send stored calls
 	preSockInitCalls.forEach(function(e){
 		socket.send(e);
 	});
+	socketInitialized = true;
 };
 	
 socket.onclose = function(event) {
