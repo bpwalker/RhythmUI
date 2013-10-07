@@ -1,0 +1,14 @@
+<html>
+	<body>
+	redirect success!
+		<script type = "text/javascript">
+			window.rhythm.call("javaTest", ["javatest1", "javatest2", "e"], function(data){
+				if(data.error){
+					console.log(data.error);
+				} else {
+					console.log("Called function! Result: " + data.results);
+				}
+			});
+		</script>
+	</body>
+</html>

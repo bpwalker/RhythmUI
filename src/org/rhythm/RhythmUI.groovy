@@ -154,7 +154,13 @@ class RhythmUI {
 						 def method = methods[methodJson.method.toString()];
 						 def methodId = methodJson.methodId.toString();
 						 if(method){
-							 response = ["results" : method(methodJson.parameters as String[])];
+							 try {
+								response.results = method(methodJson.parameters as String[]);
+								response.results.error = "";
+							 } catch(Exception e){
+							 	e.printStackTrace();
+							 	response = ["results" : ["error" : "There was an error calling the method you specified, please view the Java console to view the error."]];
+							 }
 						 }
 						 response.methodId = methodId;
 						 ws.writeTextFrame(new JsonBuilder(response).toString());
